@@ -30,7 +30,7 @@ export const FindSymbolQuery = Schema.Struct({
 })
 
 export const MkdirBody = Schema.Struct({
-  path: Schema.String.pipe(Schema.minLength(1)),
+  path: Schema.String,
 })
 
 export const MkdirResult = Schema.Struct({
