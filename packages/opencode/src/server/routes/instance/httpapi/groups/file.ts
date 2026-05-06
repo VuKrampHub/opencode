@@ -29,6 +29,14 @@ export const FindSymbolQuery = Schema.Struct({
   query: Schema.String,
 })
 
+export const MkdirBody = Schema.Struct({
+  path: Schema.String.pipe(Schema.minLength(1)),
+})
+
+export const MkdirResult = Schema.Struct({
+  path: Schema.String,
+})
+
 export const FilePaths = {
   findText: "/find",
   findFile: "/find/file",
@@ -100,6 +108,16 @@ export const FileApi = HttpApi.make("file")
             identifier: "file.status",
             summary: "Get file status",
             description: "Get the git status of all files in the project.",
+          }),
+        ),
+        HttpApiEndpoint.post("mkdir", FilePaths.mkdir, {
+          payload: MkdirBody,
+          success: described(MkdirResult, "Absolute path of the created directory"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "file.mkdir",
+            summary: "Create directory",
+            description: "Create a new directory at the given absolute path. Parent directories are created as needed.",
           }),
         ),
       )

@@ -43,6 +43,11 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
       return yield* svc.status()
     })
 
+    const mkdir = Effect.fn("FileHttpApi.mkdir")(function* (ctx: { payload: { path: string } }) {
+      const resolved = yield* svc.mkdir(ctx.payload.path)
+      return { path: resolved }
+    })
+
     return handlers
       .handle("findText", findText)
       .handle("findFile", findFile)
@@ -50,5 +55,6 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
       .handle("list", list)
       .handle("content", content)
       .handle("status", status)
+      .handle("mkdir", mkdir)
   }),
 )
