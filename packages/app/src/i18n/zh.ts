@@ -28,6 +28,8 @@ export const dict = {
   "command.sidebar.toggle": "切换侧边栏",
 
   "command.project.open": "打开项目",
+  "command.project.create": "新建文件夹",
+  "dialog.createFolder.title": "新建文件夹",
 
   "command.provider.connect": "连接提供商",
 

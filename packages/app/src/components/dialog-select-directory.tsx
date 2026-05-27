@@ -10,6 +10,16 @@ import { useGlobalSDK } from "@/context/global-sdk"
 import { useGlobalSync } from "@/context/global-sync"
 import { useLayout } from "@/context/layout"
 import { useLanguage } from "@/context/language"
+import {
+  displayPath,
+  joinPath,
+  modeOf,
+  normalizeDriveRoot,
+  parentOf,
+  rootOf,
+  tildeOf,
+  trimTrailing,
+} from "@/utils/path"
 
 interface DialogSelectDirectoryProps {
   title?: string
@@ -26,81 +36,6 @@ type Row = {
 function cleanInput(value: string) {
   const first = (value ?? "").split(/\r?\n/)[0] ?? ""
   return first.replace(/[\u0000-\u001F\u007F]/g, "").trim()
-}
-
-function normalizePath(input: string) {
-  const v = input.replaceAll("\\", "/")
-  if (v.startsWith("//") && !v.startsWith("///")) return "//" + v.slice(2).replace(/\/+/g, "/")
-  return v.replace(/\/+/g, "/")
-}
-
-function normalizeDriveRoot(input: string) {
-  const v = normalizePath(input)
-  if (/^[A-Za-z]:$/.test(v)) return v + "/"
-  return v
-}
-
-function trimTrailing(input: string) {
-  const v = normalizeDriveRoot(input)
-  if (v === "/") return v
-  if (v === "//") return v
-  if (/^[A-Za-z]:\/$/.test(v)) return v
-  return v.replace(/\/+$/, "")
-}
-
-function joinPath(base: string | undefined, rel: string) {
-  const b = trimTrailing(base ?? "")
-  const r = trimTrailing(rel).replace(/^\/+/, "")
-  if (!b) return r
-  if (!r) return b
-  if (b.endsWith("/")) return b + r
-  return b + "/" + r
-}
-
-function rootOf(input: string) {
-  const v = normalizeDriveRoot(input)
-  if (v.startsWith("//")) return "//"
-  if (v.startsWith("/")) return "/"
-  if (/^[A-Za-z]:\//.test(v)) return v.slice(0, 3)
-  return ""
-}
-
-function parentOf(input: string) {
-  const v = trimTrailing(input)
-  if (v === "/") return v
-  if (v === "//") return v
-  if (/^[A-Za-z]:\/$/.test(v)) return v
-
-  const i = v.lastIndexOf("/")
-  if (i <= 0) return "/"
-  if (i === 2 && /^[A-Za-z]:/.test(v)) return v.slice(0, 3)
-  return v.slice(0, i)
-}
-
-function modeOf(input: string) {
-  const raw = normalizeDriveRoot(input.trim())
-  if (!raw) return "relative" as const
-  if (raw.startsWith("~")) return "tilde" as const
-  if (rootOf(raw)) return "absolute" as const
-  return "relative" as const
-}
-
-function tildeOf(absolute: string, home: string) {
-  const full = trimTrailing(absolute)
-  if (!home) return ""
-
-  const hn = trimTrailing(home)
-  const lc = full.toLowerCase()
-  const hc = hn.toLowerCase()
-  if (lc === hc) return "~"
-  if (lc.startsWith(hc + "/")) return "~" + full.slice(hn.length)
-  return ""
-}
-
-function displayPath(path: string, input: string, home: string) {
-  const full = trimTrailing(path)
-  if (modeOf(input) === "absolute") return full
-  return tildeOf(full, home) || full
 }
 
 function toRow(absolute: string, home: string, group: Row["group"]): Row {

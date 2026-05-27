@@ -2,7 +2,7 @@ import * as InstanceState from "@/effect/instance-state"
 import { File } from "@/file"
 import { Ripgrep } from "@/file/ripgrep"
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 
 export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handlers) =>
@@ -44,8 +44,19 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
     })
 
     const mkdir = Effect.fn("FileHttpApi.mkdir")(function* (ctx: { payload: { path: string } }) {
-      const resolved = yield* svc.mkdir(ctx.payload.path)
-      return { path: resolved }
+      // mkdir surfaces sandbox / validation failures as defects via
+      // `throw new NamedError(...)` inside Effect.fn. Map those to typed
+      // HttpApi errors so the experimental backend mirrors the legacy
+      // Hono route's status codes (403 for access denied, 400 for the rest).
+      return yield* svc.mkdir(ctx.payload.path).pipe(
+        Effect.catchDefect((error) => {
+          const name = error instanceof Error ? error.name : ""
+          if (name === "FileMkdirAccessDeniedError") return Effect.fail(new HttpApiError.Forbidden({}))
+          if (name === "FileMkdirInvalidPathError" || name === "FileMkdirFailedError")
+            return Effect.fail(new HttpApiError.BadRequest({}))
+          return Effect.die(error)
+        }),
+      )
     })
 
     return handlers

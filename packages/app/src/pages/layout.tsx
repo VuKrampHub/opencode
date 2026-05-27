@@ -2360,6 +2360,9 @@ export default function Layout(props: ParentProps) {
       openProjectLabel={language.t("command.project.open")}
       openProjectKeybind={() => command.keybind("project.open")}
       onOpenProject={chooseProject}
+      createProjectLabel={language.t("command.project.create")}
+      createProjectKeybind={() => command.keybind("project.create")}
+      onCreateProject={createProject}
       renderProjectOverlay={projectOverlay}
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}

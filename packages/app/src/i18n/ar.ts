@@ -21,6 +21,8 @@ export const dict = {
   "theme.scheme.dark": "داكن",
   "command.sidebar.toggle": "تبديل الشريط الجانبي",
   "command.project.open": "فتح مشروع",
+  "command.project.create": "مجلد جديد",
+  "dialog.createFolder.title": "مجلد جديد",
   "command.provider.connect": "اتصال بموفر",
   "command.server.switch": "تبديل الخادم",
   "command.settings.open": "فتح الإعدادات",

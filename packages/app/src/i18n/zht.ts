@@ -27,6 +27,8 @@ export const dict = {
 
   "command.sidebar.toggle": "切換側邊欄",
   "command.project.open": "開啟專案",
+  "command.project.create": "新增資料夾",
+  "dialog.createFolder.title": "新增資料夾",
   "command.provider.connect": "連接提供者",
   "command.server.switch": "切換伺服器",
   "command.settings.open": "開啟設定",

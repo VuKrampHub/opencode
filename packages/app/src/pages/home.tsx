@@ -69,7 +69,9 @@ export default function Home() {
     }
   }
 
-  function createFolder() {
+  // Named to match the `command.project.create` command id and the layout
+  // sidebar's `createProject` handler.
+  function createProject() {
     dialog.show(() => (
       <DialogCreateFolder
         onCreated={(path) => {
@@ -102,7 +104,7 @@ export default function Home() {
             <div class="flex gap-2 items-center justify-between pl-3">
               <div class="text-14-medium text-text-strong">{language.t("home.recentProjects")}</div>
               <div class="flex gap-2">
-                <Button icon="folder-add-left" size="normal" class="pl-2 pr-3" onClick={createFolder}>
+                <Button icon="folder-add-left" size="normal" class="pl-2 pr-3" onClick={createProject}>
                   {language.t("command.project.create")}
                 </Button>
                 <Button icon="folder-add-left" size="normal" class="pl-2 pr-3" onClick={chooseProject}>
@@ -133,7 +135,7 @@ export default function Home() {
           <div class="mt-30 mx-auto flex flex-col items-center gap-3">
             <div class="text-12-regular text-text-weak">{language.t("common.loading")}</div>
             <div class="flex gap-2">
-              <Button class="px-3" onClick={createFolder}>
+              <Button class="px-3" onClick={createProject}>
                 {language.t("command.project.create")}
               </Button>
               <Button class="px-3" onClick={chooseProject}>
@@ -150,7 +152,7 @@ export default function Home() {
               <div class="text-12-regular text-text-weak">{language.t("home.empty.description")}</div>
             </div>
             <div class="flex gap-2 mt-1">
-              <Button class="px-3" onClick={createFolder}>
+              <Button class="px-3" onClick={createProject}>
                 {language.t("command.project.create")}
               </Button>
               <Button class="px-3" onClick={chooseProject}>

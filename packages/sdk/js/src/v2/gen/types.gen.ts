@@ -4003,7 +4003,7 @@ export type FileMkdirResponses = {
   /**
    * Absolute path of the created directory
    */
-  200: { path: string }
+  200: { path: string; created: boolean }
 }
 
 export type FileMkdirResponse = FileMkdirResponses[keyof FileMkdirResponses]

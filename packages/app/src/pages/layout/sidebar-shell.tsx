@@ -24,6 +24,9 @@ export const SidebarContent = (props: {
   openProjectLabel: JSX.Element
   openProjectKeybind: Accessor<string | undefined>
   onOpenProject: () => void
+  createProjectLabel: JSX.Element
+  createProjectKeybind: Accessor<string | undefined>
+  onCreateProject: () => void
   renderProjectOverlay: () => JSX.Element
   settingsLabel: Accessor<string>
   settingsKeybind: Accessor<string | undefined>
@@ -83,6 +86,25 @@ export const SidebarContent = (props: {
                   size="large"
                   onClick={props.onOpenProject}
                   aria-label={typeof props.openProjectLabel === "string" ? props.openProjectLabel : undefined}
+                />
+              </Tooltip>
+              <Tooltip
+                placement={placement()}
+                value={
+                  <div class="flex items-center gap-2">
+                    <span>{props.createProjectLabel}</span>
+                    <Show when={!props.mobile && !!props.createProjectKeybind()}>
+                      <span class="text-icon-base text-12-medium">{props.createProjectKeybind()}</span>
+                    </Show>
+                  </div>
+                }
+              >
+                <IconButton
+                  icon="folder-add-left"
+                  variant="ghost"
+                  size="large"
+                  onClick={props.onCreateProject}
+                  aria-label={typeof props.createProjectLabel === "string" ? props.createProjectLabel : undefined}
                 />
               </Tooltip>
             </div>

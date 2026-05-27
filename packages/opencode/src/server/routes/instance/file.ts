@@ -169,18 +169,24 @@ export const FileRoutes = lazy(() =>
       "/file/mkdir",
       describeRoute({
         summary: "Create directory",
-        description: "Create a new directory at the given absolute path. Parent directories are created as needed.",
+        description:
+          "Create a new directory. The path may be absolute, start with ~ for the user's home directory, or be relative to the project directory. Parent directories are created as needed. The resolved path must be inside the project directory, the worktree, or the user's home directory.",
         operationId: "file.mkdir",
         responses: {
           200: {
             description: "Absolute path of the created directory",
             content: {
               "application/json": {
-                schema: resolver(z.object({ path: z.string() })),
+                schema: resolver(
+                  z.object({
+                    path: z.string(),
+                    created: z.boolean(),
+                  }),
+                ),
               },
             },
           },
-          ...errors(400),
+          ...errors(400, 403),
         },
       }),
       validator(
@@ -192,8 +198,7 @@ export const FileRoutes = lazy(() =>
       async (c) =>
         jsonRequest("FileRoutes.mkdir", c, function* () {
           const svc = yield* File.Service
-          const resolved = yield* svc.mkdir(c.req.valid("json").path)
-          return { path: resolved }
+          return yield* svc.mkdir(c.req.valid("json").path)
         }),
     )
     .get(

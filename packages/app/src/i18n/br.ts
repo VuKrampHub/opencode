@@ -21,6 +21,8 @@ export const dict = {
   "theme.scheme.dark": "Escuro",
   "command.sidebar.toggle": "Alternar barra lateral",
   "command.project.open": "Abrir projeto",
+  "command.project.create": "Nova pasta",
+  "dialog.createFolder.title": "Nova pasta",
   "command.provider.connect": "Conectar provedor",
   "command.server.switch": "Trocar servidor",
   "command.settings.open": "Abrir configurações",

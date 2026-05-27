@@ -9,9 +9,12 @@ import { formatPatch, structuredPatch } from "diff"
 import fuzzysort from "fuzzysort"
 import ignore from "ignore"
 import path from "path"
-import { mkdir as fsMkdir } from "fs/promises"
+import os from "os"
+import { mkdir as fsMkdir, stat as fsStat } from "fs/promises"
 import { Global } from "@opencode-ai/core/global"
 import { containsPath } from "../project/instance-context"
+import { NamedError } from "@opencode-ai/core/util/error"
+import z from "zod"
 import * as Log from "@opencode-ai/core/util/log"
 import { Protected } from "./protected"
 import { Ripgrep } from "./ripgrep"
@@ -76,6 +79,29 @@ export const Event = {
     }),
   ),
 }
+
+export const MkdirAccessDeniedError = NamedError.create(
+  "FileMkdirAccessDeniedError",
+  z.object({
+    message: z.string(),
+    path: z.string(),
+  }),
+)
+
+export const MkdirInvalidPathError = NamedError.create(
+  "FileMkdirInvalidPathError",
+  z.object({
+    message: z.string(),
+  }),
+)
+
+export const MkdirFailedError = NamedError.create(
+  "FileMkdirFailedError",
+  z.object({
+    message: z.string(),
+    path: z.string(),
+  }),
+)
 
 const log = Log.create({ service: "file" })
 
@@ -324,7 +350,7 @@ export interface Interface {
   readonly status: () => Effect.Effect<Info[]>
   readonly read: (file: string) => Effect.Effect<Content>
   readonly list: (dir?: string) => Effect.Effect<Node[]>
-  readonly mkdir: (absolutePath: string) => Effect.Effect<string>
+  readonly mkdir: (input: string) => Effect.Effect<{ path: string; created: boolean }>
   readonly search: (input: {
     query: string
     limit?: number
@@ -646,13 +672,62 @@ export const layer = Layer.effect(
       return output
     })
 
-    const mkdir = Effect.fn("File.mkdir")(function* (absolutePath: string) {
-      const resolved = path.resolve(absolutePath)
+    const mkdir = Effect.fn("File.mkdir")(function* (input: string) {
+      const trimmed = (input ?? "").trim()
+      if (!trimmed) {
+        throw new MkdirInvalidPathError({ message: "Path is required" })
+      }
+      if (trimmed.includes("\0")) {
+        throw new MkdirInvalidPathError({ message: "Path contains null bytes" })
+      }
+
+      const home = os.homedir()
+      const expanded = (() => {
+        if (trimmed === "~") return home
+        if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) return path.join(home, trimmed.slice(2))
+        return trimmed
+      })()
+
+      const ctx = yield* InstanceState.context
+      const base = path.isAbsolute(expanded) ? expanded : path.resolve(ctx.directory, expanded)
+      const resolved = path.resolve(base)
+
+      // Sandbox: allow only paths inside the instance directory, the worktree,
+      // or the user's home directory. This blocks /etc, /usr, etc. while
+      // preserving the "create a new project anywhere under home" workflow.
+      const allowed =
+        containsPath(resolved, ctx) || (home !== "" && AppFileSystem.contains(home, resolved))
+      if (!allowed) {
+        throw new MkdirAccessDeniedError({
+          message: "Path is outside the project directory and the user home directory",
+          path: resolved,
+        })
+      }
+
+      const existing = yield* Effect.tryPromise({
+        try: () => fsStat(resolved),
+        catch: () => undefined,
+      }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+
+      if (existing) {
+        if (!existing.isDirectory()) {
+          throw new MkdirFailedError({
+            message: "A file already exists at this path",
+            path: resolved,
+          })
+        }
+        return { path: resolved, created: false }
+      }
+
       yield* Effect.tryPromise({
         try: () => fsMkdir(resolved, { recursive: true }),
-        catch: (err) => new Error(err instanceof Error ? err.message : "Failed to create directory"),
+        catch: (err) =>
+          new MkdirFailedError({
+            message: err instanceof Error ? err.message : "Failed to create directory",
+            path: resolved,
+          }),
       })
-      return resolved
+      return { path: resolved, created: true }
     })
 
     log.info("init")

@@ -2,7 +2,7 @@ import { File } from "@/file"
 import { Ripgrep } from "@/file/ripgrep"
 import { LSP } from "@/lsp/lsp"
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import { WorkspaceRoutingMiddleware } from "../middleware/workspace-routing"
@@ -29,14 +29,6 @@ export const FindSymbolQuery = Schema.Struct({
   query: Schema.String,
 })
 
-export const MkdirBody = Schema.Struct({
-  path: Schema.String,
-})
-
-export const MkdirResult = Schema.Struct({
-  path: Schema.String,
-})
-
 export const FilePaths = {
   findText: "/find",
   findFile: "/find/file",
@@ -46,6 +38,19 @@ export const FilePaths = {
   status: "/file/status",
   mkdir: "/file/mkdir",
 } as const
+
+export const FileMkdirInput = Schema.Struct({
+  // Empty-string rejection is enforced server-side by File.mkdir (which
+  // throws FileMkdirInvalidPathError → 400). Keeping the schema as a plain
+  // String matches the remote's tested choice; `Schema.minLength` was
+  // unavailable in this Effect version (see the prior revert).
+  path: Schema.String,
+}).annotate({ identifier: "FileMkdirInput" })
+
+export const FileMkdirOutput = Schema.Struct({
+  path: Schema.String,
+  created: Schema.Boolean,
+}).annotate({ identifier: "FileMkdirOutput" })
 
 export const FileApi = HttpApi.make("file")
   .add(
@@ -111,13 +116,15 @@ export const FileApi = HttpApi.make("file")
           }),
         ),
         HttpApiEndpoint.post("mkdir", FilePaths.mkdir, {
-          payload: MkdirBody,
-          success: described(MkdirResult, "Absolute path of the created directory"),
+          payload: FileMkdirInput,
+          success: described(FileMkdirOutput, "Absolute path of the created directory"),
+          error: [HttpApiError.BadRequest, HttpApiError.Forbidden],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "file.mkdir",
             summary: "Create directory",
-            description: "Create a new directory at the given absolute path. Parent directories are created as needed.",
+            description:
+              "Create a new directory. The path may be absolute, start with ~ for the user's home directory, or be relative to the project directory. Parent directories are created as needed. The resolved path must be inside the project directory, the worktree, or the user's home directory.",
           }),
         ),
       )

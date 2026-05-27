@@ -23,6 +23,8 @@ export const dict = {
 
   "command.sidebar.toggle": "Alternar barra lateral",
   "command.project.open": "Abrir proyecto",
+  "command.project.create": "Nueva carpeta",
+  "dialog.createFolder.title": "Nueva carpeta",
   "command.provider.connect": "Conectar proveedor",
   "command.server.switch": "Cambiar servidor",
   "command.settings.open": "Abrir ajustes",

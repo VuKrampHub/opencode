@@ -26,6 +26,9 @@ export const ErrorMiddleware: ErrorHandler = (err, c) => {
     else if (err instanceof Provider.ModelNotFoundError) status = 400
     else if (err.name === "ProviderAuthValidationFailed") status = 400
     else if (err.name.startsWith("Worktree")) status = 400
+    else if (err.name === "FileMkdirAccessDeniedError") status = 403
+    else if (err.name === "FileMkdirInvalidPathError") status = 400
+    else if (err.name === "FileMkdirFailedError") status = 400
     else status = 500
     return c.json(err.toObject(), { status })
   }
