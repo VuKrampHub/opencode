@@ -516,40 +516,44 @@ export const layer = Layer.effect(
             const url = key.replace(/\/+$/, "")
             process.env[value.key] = value.token
             log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
-            const response = yield* Effect.promise(() => fetch(`${url}/.well-known/opencode`))
-            if (!response.ok) {
-              throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+            try {
+              const response = yield* Effect.promise(() => fetch(`${url}/.well-known/opencode`))
+              if (!response.ok) {
+                throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+              }
+              const wellknown = (yield* Effect.promise(() => response.json())) as {
+                config?: Record<string, unknown>
+                remote_config?: unknown
+              }
+              const remote = yield* Effect.promise(() =>
+                substituteWellKnownRemoteConfig({
+                  value: wellknown.remote_config,
+                  dir: url,
+                  source: `${url}/.well-known/opencode`,
+                }),
+              )
+              const fetchedConfig = remote
+                ? ((yield* Effect.promise(async () => {
+                    log.debug("fetching remote config", { url: remote.url })
+                    const response = await fetch(remote.url, { headers: remote.headers })
+                    if (!response.ok)
+                      throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
+                    const data = await response.json()
+                    return isRecord(data) && isRecord(data.config) ? data.config : data
+                  })) as Record<string, unknown>)
+                : {}
+              const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
+              if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
+              const source = `${url}/.well-known/opencode`
+              const next = yield* loadConfig(JSON.stringify(remoteConfig), {
+                dir: path.dirname(source),
+                source,
+              })
+              yield* merge(source, next, "global")
+              log.debug("loaded remote config from well-known", { url })
+            } catch (err: any) {
+              log.warn("failed to fetch remote config", { url, error: String(err.message ?? err) })
             }
-            const wellknown = (yield* Effect.promise(() => response.json())) as {
-              config?: Record<string, unknown>
-              remote_config?: unknown
-            }
-            const remote = yield* Effect.promise(() =>
-              substituteWellKnownRemoteConfig({
-                value: wellknown.remote_config,
-                dir: url,
-                source: `${url}/.well-known/opencode`,
-              }),
-            )
-            const fetchedConfig = remote
-              ? ((yield* Effect.promise(async () => {
-                  log.debug("fetching remote config", { url: remote.url })
-                  const response = await fetch(remote.url, { headers: remote.headers })
-                  if (!response.ok)
-                    throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
-                  const data = await response.json()
-                  return isRecord(data) && isRecord(data.config) ? data.config : data
-                })) as Record<string, unknown>)
-              : {}
-            const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
-            if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
-            const source = `${url}/.well-known/opencode`
-            const next = yield* loadConfig(JSON.stringify(remoteConfig), {
-              dir: path.dirname(source),
-              source,
-            })
-            yield* merge(source, next, "global")
-            log.debug("loaded remote config from well-known", { url })
           }
         }
 
